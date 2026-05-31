@@ -1,0 +1,17 @@
+api:
+    dashboard: true
+    insecure: true
+
+ping: { }
+
+entrypoints:
+    web:
+        address: ":80"
+
+providers:
+    file:
+        filename: /etc/traefik/dynamic.yml
+        watch: true
+
+log:
+    level: INFO

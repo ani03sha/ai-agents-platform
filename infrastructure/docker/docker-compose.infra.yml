@@ -1,0 +1,128 @@
+name: ai-agents-infra
+
+services:
+    postgres:
+        image: postgres:18-alpine
+        container_name: agents-postgres
+        ports:
+            - "5633:5432"
+        environment:
+            POSTGRES_DB: agents
+            POSTGRES_USER: agents
+            POSTGRES_PASSWORD: agents_dev_password
+        volumes:
+            - agents_postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: [ "CMD-SHELL", "pg_isready -U agents -d agents" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+
+    redis:
+        image: redis:8-alpine
+        container_name: agents-redis
+        ports:
+            - "6390:6379"
+        command: redis-server --appendonly yes
+        healthcheck:
+            test: [ "CMD", "redis-cli", "ping" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+
+    qdrant:
+        image: qdrant/qdrant:v1.18.1
+        container_name: agents-qdrant
+        ports:
+            - "6353:6333" # REST
+            - "6354:6334" # gRPC
+        volumes:
+            - agents_qdrant_data:/qdrant/storage
+        healthcheck:
+            test: [ "CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333'" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+
+    redpanda:
+        image: redpandadata/redpanda:v24.1.1
+        container_name: agents-redpanda
+        command:
+            - redpanda
+            - start
+            - --smp 1
+            - --memory 512M
+            - --overprovisioned
+            - --node-id 0
+            - --kafka-addr INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9093
+            - --advertise-kafka-addr INTERNAL://redpanda:29092,EXTERNAL://localhost:9093
+            - --pandaproxy-addr 0.0.0.0:8082
+            - --advertise-pandaproxy-addr localhost:8083
+        ports:
+            - "9093:9093"   # Kafka API — host connects here
+            - "8083:8082"   # Pandaproxy
+            - "9645:9644"   # Admin API
+        volumes:
+            - agents_redpanda_data:/var/lib/redpanda/data
+        healthcheck:
+            test: [ "CMD", "rpk", "cluster", "health" ]
+            interval: 15s
+            timeout: 10s
+            retries: 5
+
+    redpanda-console:
+        image: redpandadata/console:v2.5.2
+        container_name: agents-redpanda-console
+        depends_on:
+            redpanda:
+                condition: service_healthy
+        ports:
+            - "8081:8080"
+        environment:
+            KAFKA_BROKERS: "redpanda:29092"   # uses the INTERNAL listener
+
+    ollama:
+        image: ollama/ollama:latest
+        container_name: agents-ollama
+        ports:
+            - "11434:11434"
+        volumes:
+            - ${HOME}/.ollama:/root/.ollama   # share models with your native Ollama
+
+    prometheus:
+        image: prom/prometheus:v2.52.0
+        container_name: agents-prometheus
+        ports:
+            - "9091:9090"
+        volumes:
+            - ./prometheus.yml:/etc/prometheus/prometheus.yml
+        command:
+            - --config.file=/etc/prometheus/prometheus.yml
+
+    jaeger:
+        image: jaegertracing/all-in-one:1.57
+        container_name: agents-jaeger
+        ports:
+            - "16687:16686"   # UI
+            - "4318:4317"     # OTLP gRPC (host 4318 -> container 4317)
+        environment:
+            COLLECTOR_OTLP_ENABLED: "true"
+
+    traefik:
+        image: traefik:v3.0
+        container_name: agents-traefik
+        ports:
+            - "8090:80"     # API gateway
+            - "8089:8080"   # Traefik dashboard
+        volumes:
+            - ./traefik.yml:/etc/traefik/traefik.yml
+            - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml
+
+volumes:
+    agents_postgres_data:
+    agents_qdrant_data:
+    agents_redpanda_data:
+
+networks:
+    default:
+        name: ai-agents-network

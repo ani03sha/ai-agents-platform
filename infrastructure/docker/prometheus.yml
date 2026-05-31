@@ -1,0 +1,10 @@
+global:
+    scrape_interval: 15s
+
+scrape_configs:
+    -   job_name: agent-gateway
+        static_configs:
+            -   targets: [ "host.docker.internal:8010" ]
+    -   job_name: agent-worker
+        static_configs:
+            -   targets: [ "host.docker.internal:8011" ]

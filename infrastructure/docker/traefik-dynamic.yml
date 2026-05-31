@@ -1,0 +1,19 @@
+http:
+    routers:
+        gateway-router:
+            rule: "PathPrefix(`/v1/gateway`)"
+            service: agent-gateway
+            middlewares:
+                - rate-limit
+
+    services:
+        agent-gateway:
+            loadBalancer:
+                servers:
+                    -   url: "http://host.docker.internal:8010"
+
+    middlewares:
+        rate-limit:
+            rateLimit:
+                average: 100
+                burst: 50
