@@ -20,10 +20,10 @@ def issue_access_token(
     *,
     secret: str,
     algorithm: str,
-    expire_minutes: int,
+    expiry_minutes: int,
     scopes: list[str] | None = None,
 ) -> str:
-    expiry = datetime.now(UTC) + timedelta(minutes=expire_minutes)
+    expiry = datetime.now(UTC) + timedelta(minutes=expiry_minutes)
     return jwt.encode(
         {
             "sub": sub,

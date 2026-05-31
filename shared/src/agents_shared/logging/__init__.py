@@ -16,6 +16,6 @@ def configure_logging(debug: bool = False) -> None:
             structlog.processors.add_log_level,
             structlog.processors.ConsoleRenderer()
             if debug
-            else structlog.dev.JSONRenderer(),
+            else structlog.processors.JSONRenderer(),
         ]
     )
