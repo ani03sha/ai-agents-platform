@@ -1,0 +1,32 @@
+[project]
+name = "ai-agents-platform"
+version = "0.1.0"
+description = "A production-grade AI agents platform built from first principles"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "structlog>=25.5.0",
+]
+
+[tool.uv.workspace]
+members = [
+    "shared",
+]
+
+[tool.uv.sources]
+agents-shared = { workspace = true }   # resolve agents-shared from the workspace, not PyPI
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27", # async test client for FastAPI (used later)
+    "ruff>=0.4", # linter + formatter
+    "mypy>=1.10",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
